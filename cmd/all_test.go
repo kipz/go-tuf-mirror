@@ -13,6 +13,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	DelegatedTargetsLength = 2
+)
+
 func TestAll(t *testing.T) {
 	tempDir := os.TempDir()
 	tempPath := types.OCIPrefix + os.TempDir()
@@ -22,14 +26,17 @@ func TestAll(t *testing.T) {
 		dstMeta string
 		srcTgt  string
 		dstTgt  string
+		full    bool
 	}{
-		{"git targets to oci", mirror.DefaultMetadataURL, tempPath, mirror.DefaultTargetsURL, tempPath},
+		{"http to oci", mirror.DefaultMetadataURL, tempPath, mirror.DefaultTargetsURL, tempPath, false},
+		{"http with delegates to oci", mirror.DefaultMetadataURL, tempPath, mirror.DefaultTargetsURL, tempPath, true},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			opts := defaultRootOptions()
 			opts.tufPath = tempDir
+			opts.full = tc.full
 			cmd := newAllCmd(opts)
 
 			expectedMetadataOutput := fmt.Sprintf("Mirroring TUF metadata %s to %s\n", tc.srcMeta, tc.dstMeta)
@@ -54,6 +61,12 @@ func TestAll(t *testing.T) {
 
 			_, err = reader.ReadString('\n')
 			require.NoError(t, err)
+			if tc.full {
+				for i := 0; i < DelegatedTargetsLength; i++ {
+					_, err = reader.ReadString('\n')
+					require.NoError(t, err)
+				}
+			}
 			targetsOut, err := reader.ReadString('\n')
 			require.NoError(t, err)
 			assert.Equal(t, expectedTargetsOutput, targetsOut)
