@@ -2,6 +2,7 @@ package mirror
 
 import (
 	"fmt"
+	"strconv"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
@@ -47,7 +48,7 @@ func (m *TufMirror) getTufMetadataMirror(metadataURL string) (*TufMetadata, erro
 	if err != nil {
 		return nil, fmt.Errorf("failed to get root metadata: %w", err)
 	}
-	rootMetadata[fmt.Sprintf("%d.root.json", rootVersion)] = rootBytes
+	rootMetadata[nameFromRole(metadata.ROOT, strconv.FormatInt(rootVersion, 10))] = rootBytes
 
 	snapshotBytes, err := trustedMetadata.Snapshot.ToBytes(false)
 	if err != nil {
@@ -62,16 +63,16 @@ func (m *TufMirror) getTufMetadataMirror(metadataURL string) (*TufMetadata, erro
 		return nil, fmt.Errorf("failed to get timestamp metadata: %w", err)
 	}
 
-	snapshotName := "snapshot.json"
-	targetsName := "targets.json"
+	snapshotVersion := ""
+	targetsVersion := ""
 	if trustedMetadata.Root.Signed.ConsistentSnapshot {
-		snapshotName = fmt.Sprintf("%d.snapshot.json", trustedMetadata.Snapshot.Signed.Version)
-		targetsName = fmt.Sprintf("%d.targets.json", trustedMetadata.Targets[metadata.TARGETS].Signed.Version)
+		snapshotVersion = strconv.FormatInt(trustedMetadata.Snapshot.Signed.Version, 10)
+		targetsVersion = strconv.FormatInt(trustedMetadata.Targets[metadata.TARGETS].Signed.Version, 10)
 	}
 	return &TufMetadata{
 		Root:      rootMetadata,
-		Snapshot:  map[string][]byte{snapshotName: snapshotBytes},
-		Targets:   map[string][]byte{targetsName: targetsBytes},
+		Snapshot:  map[string][]byte{nameFromRole(metadata.SNAPSHOT, snapshotVersion): snapshotBytes},
+		Targets:   map[string][]byte{nameFromRole(metadata.TARGETS, targetsVersion): targetsBytes},
 		Timestamp: timestampBytes,
 	}, nil
 }
@@ -155,7 +156,16 @@ func (m *TufMirror) getDelegatedTargetsMetadata() (*[]DelegatedTargetMetadata, e
 		if err != nil {
 			return nil, fmt.Errorf("failed to get role %s metadata: %w", role.Name, err)
 		}
-		*delegatedTargets = append(*delegatedTargets, DelegatedTargetMetadata{Name: role.Name, Data: roleBytes})
+		meta, ok := md.Snapshot.Signed.Meta[nameFromRole(role.Name, "")]
+		if !ok {
+			return nil, fmt.Errorf("failed to get role %s metadata: %w", role.Name, err)
+		}
+		// extract target metadata version in case of consistent snapshot naming
+		version := ""
+		if md.Root.Signed.ConsistentSnapshot {
+			version = strconv.FormatInt(meta.Version, 10)
+		}
+		*delegatedTargets = append(*delegatedTargets, DelegatedTargetMetadata{Name: role.Name, Version: version, Data: roleBytes})
 	}
 	return delegatedTargets, nil
 }
@@ -167,7 +177,7 @@ func (m *TufMirror) buildDelegatedMetadataManifests(delegated *[]DelegatedTarget
 		img := empty.Image
 		img = mutate.MediaType(img, types.OCIManifestSchema1)
 		img = mutate.ConfigMediaType(img, types.OCIConfigJSON)
-		ann := map[string]string{tufFileAnnotation: fmt.Sprintf("%s.json", role.Name)}
+		ann := map[string]string{tufFileAnnotation: nameFromRole(role.Name, role.Version)}
 		layer := mutate.Addendum{Layer: static.NewLayer(role.Data, tufMetadataMediaType), Annotations: ann}
 		img, err := mutate.Append(img, layer)
 		if err != nil {
@@ -176,4 +186,11 @@ func (m *TufMirror) buildDelegatedMetadataManifests(delegated *[]DelegatedTarget
 		manifests = append(manifests, &MirrorImage{Image: &img, Tag: role.Name})
 	}
 	return manifests, nil
+}
+
+func nameFromRole(role, version string) string {
+	if version != "" {
+		return fmt.Sprintf("%s.%s.json", version, role)
+	}
+	return fmt.Sprintf("%s.json", role)
 }
