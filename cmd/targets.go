@@ -88,7 +88,11 @@ func (o *targetsOptions) run(cmd *cobra.Command, args []string) error {
 		} else {
 			tufPath = strings.TrimSpace(o.rootOptions.tufPath)
 		}
-		m, err = mirror.NewTufMirror(o.rootOptions.tufRootBytes, tufPath, o.metadata, o.source, tuf.NewVersionChecker())
+		rootBytes, err := tuf.GetEmbeddedTufRootBytes(o.rootOptions.tufRoot)
+		if err != nil {
+			return fmt.Errorf("failed to get root bytes: %w", err)
+		}
+		m, err = mirror.NewTufMirror(rootBytes, tufPath, o.metadata, o.source, tuf.NewVersionChecker())
 		if err != nil {
 			return fmt.Errorf("failed to create TUF mirror: %w", err)
 		}
