@@ -10,6 +10,7 @@ import (
 	"github.com/docker/attest/pkg/mirror"
 	"github.com/docker/attest/pkg/tuf"
 	"github.com/docker/go-tuf-mirror/internal/util"
+	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/spf13/cobra"
 )
 
@@ -68,8 +69,11 @@ func (o *targetsOptions) run(cmd *cobra.Command, args []string) error {
 	if !util.IsValidUrl(o.source) {
 		return fmt.Errorf("invalid source url: %s", o.source)
 	}
-	if strings.HasPrefix(o.destination, RegistryPrefix) && strings.Contains(strings.TrimPrefix(o.destination, RegistryPrefix), ":") {
-		return fmt.Errorf("destination registry should not specify tag: %s", o.destination)
+	if strings.HasPrefix(o.destination, RegistryPrefix) {
+		_, err := name.NewRepository(strings.TrimPrefix(o.destination, RegistryPrefix))
+		if err != nil {
+			return fmt.Errorf("failed to parse destination registry reference: %w", err)
+		}
 	}
 
 	fmt.Fprintf(cmd.OutOrStdout(), "Mirroring TUF targets %s to %s\n", o.source, o.destination)
@@ -140,7 +144,7 @@ func (o *targetsOptions) run(cmd *cobra.Command, args []string) error {
 		repo := strings.TrimPrefix(o.destination, RegistryPrefix)
 		for _, t := range targets {
 			imageName := fmt.Sprintf("%s:%s", repo, t.Tag)
-			err = mirror.SaveImageAsOCILayout(t.Image, imageName)
+			err = mirror.PushImageToRegistry(t.Image, imageName)
 			if err != nil {
 				return fmt.Errorf("failed to push target manifest: %w", err)
 			}
