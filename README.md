@@ -3,7 +3,7 @@
 Mirror TUF metadata to/between OCI registries
 
 <div align="left">
-<img src="https://github.com/docker/go-tuf-mirror/actions/workflows/test.yml/badge.svg" alt="drawing"/>
+<img src="https://github.com/kipz/go-tuf-mirror/actions/workflows/test.yml/badge.svg" alt="drawing"/>
 </div>
 
 ## Usage
@@ -28,12 +28,12 @@ jobs:
           username: dockerpublicbot
           password: ${{ secrets.DOCKERPUBLICBOT_WRITE_PAT }}
       - name: Mirror metadata
-        uses: docker/go-tuf-mirror/actions/metadata@v0.1.0
+        uses: kipz/go-tuf-mirror/actions/metadata@v0.1.0
         with:
           source: https://docker.github.io/tuf-staging/metadata
           destination: docker://docker/tuf-metadata:latest
       - name: Mirror targets
-        uses: docker/go-tuf-mirror/actions/targets@v0.1.0
+        uses: kipz/go-tuf-mirror/actions/targets@v0.1.0
         with:
           metadata: https://docker.github.io/tuf-staging/metadata
           source: https://docker.github.io/tuf-staging/targets
