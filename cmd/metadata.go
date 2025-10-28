@@ -25,7 +25,6 @@ import (
 
 	"github.com/docker/attest/mirror"
 	"github.com/docker/attest/oci"
-	"github.com/docker/attest/tuf"
 	mirrortuf "github.com/docker/go-tuf-mirror/internal/tuf"
 	"github.com/docker/go-tuf-mirror/internal/util"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -95,11 +94,16 @@ func (o *metadataOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Fprintf(cmd.OutOrStdout(), "Mirroring TUF metadata %s to %s\n", o.source, o.destination)
-	root, err := tuf.GetEmbeddedRoot(o.rootOptions.tufRoot)
+
+	// Fetch root.json from source instead of using embedded root
+	rootURL := strings.TrimSuffix(o.source, "/") + "/1.root.json"
+	fmt.Fprintf(cmd.OutOrStdout(), "Fetching initial root from %s\n", rootURL)
+	rootData, err := util.HTTPGet(rootURL)
 	if err != nil {
-		return fmt.Errorf("failed to get root bytes: %w", err)
+		return fmt.Errorf("failed to fetch root from source: %w", err)
 	}
-	m, err := mirror.NewTUFMirror(cmd.Context(), root.Data, tufPath, o.source, o.targets, &mirrortuf.NullVersionChecker{})
+
+	m, err := mirror.NewTUFMirror(cmd.Context(), rootData, tufPath, o.source, o.targets, &mirrortuf.NullVersionChecker{})
 	if err != nil {
 		return fmt.Errorf("failed to create TUF mirror: %w", err)
 	}

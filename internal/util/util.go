@@ -17,6 +17,9 @@
 package util
 
 import (
+	"fmt"
+	"io"
+	"net/http"
 	"net/url"
 )
 
@@ -29,4 +32,24 @@ func IsValidUrl(toTest string) bool {
 
 	u, err := url.Parse(toTest)
 	return err == nil && u.Scheme != "" && u.Host != ""
+}
+
+// HTTPGet fetches content from a URL and returns it as bytes.
+func HTTPGet(url string) ([]byte, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("HTTP GET failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP GET returned status %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	return body, nil
 }
