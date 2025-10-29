@@ -92,18 +92,29 @@ func TestAll(t *testing.T) {
 			require.NoError(t, err)
 
 			reader := bufio.NewReader(b)
+
+			// Read metadata output line
 			metaOut, err := reader.ReadString('\n')
 			require.NoError(t, err)
 			assert.Equal(t, expectedMetadataOutput, metaOut)
 
+			// Skip "Fetching initial root from..." line
 			_, err = reader.ReadString('\n')
 			require.NoError(t, err)
+
+			// Skip "Metadata manifest layout saved to..." line
+			_, err = reader.ReadString('\n')
+			require.NoError(t, err)
+
+			// Skip delegated metadata output lines if full
 			if tc.full {
 				for i := 0; i < DelegatedTargetsLength; i++ {
 					_, err = reader.ReadString('\n')
 					require.NoError(t, err)
 				}
 			}
+
+			// Read targets output line
 			targetsOut, err := reader.ReadString('\n')
 			require.NoError(t, err)
 			assert.Equal(t, expectedTargetsOutput, targetsOut)

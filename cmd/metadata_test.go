@@ -84,9 +84,10 @@ func TestMetadataCmd(t *testing.T) {
 					delegatedOutput += fmt.Sprintf("Delegated metadata manifest %s to %s\n", operation, filepath.Join(output, d))
 				}
 			}
-			expectedOutput := fmt.Sprintf("Mirroring TUF metadata %s to %s\nMetadata manifest %s to %s\n",
+			expectedOutput := fmt.Sprintf("Mirroring TUF metadata %s to %s\nFetching initial root from %s/1.root.json\nMetadata manifest %s to %s\n",
 				tc.source,
 				tc.destination,
+				tc.source,
 				operation,
 				output)
 			if tc.full {

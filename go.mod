@@ -9,9 +9,6 @@ require (
 	github.com/stretchr/testify v1.9.0
 )
 
-// fork with changes to support ArtifactType (https://github.com/google/go-containerregistry/pull/1931)
-replace github.com/google/go-containerregistry => github.com/docker/go-containerregistry v0.0.0-20240808132857-c8bfc44af7c8
-
 require (
 	cloud.google.com/go/compute/metadata v0.5.2 // indirect
 	github.com/Masterminds/semver/v3 v3.3.0 // indirect
